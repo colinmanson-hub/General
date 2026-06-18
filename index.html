@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spirograph Studio</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <canvas id="stage"></canvas>
+
+  <div id="panel">
+    <div class="panel-section">
+      <label>Shape</label>
+      <select id="shape-type">
+        <option value="circle">Circle</option>
+        <option value="rectangle">Rectangle</option>
+        <option value="polygon">Polygon</option>
+        <option value="star">Star</option>
+      </select>
+      <label>Side</label>
+      <select id="wheel-side">
+        <option value="inside">Inside</option>
+        <option value="outside">Outside</option>
+      </select>
+    </div>
+
+    <div class="panel-section">
+      <label>Sides (polygon) / Points (star)</label>
+      <input type="number" id="shape-sides" min="3" max="20" value="6" />
+      <label>Aspect (rect)</label>
+      <input type="number" id="shape-aspect" min="0.1" max="5" step="0.1" value="1.5" />
+      <label>Size</label>
+      <input type="range" id="shape-size" min="0.1" max="1" step="0.01" value="0.8" />
+    </div>
+
+    <div class="panel-section">
+      <label>Wheel radius (r)</label>
+      <input type="range" id="wheel-r" min="0.05" max="0.95" step="0.01" value="0.3" />
+      <label>Pen offset (d)</label>
+      <input type="range" id="wheel-d" min="0.0" max="1.5" step="0.01" value="0.4" />
+      <label>Loops</label>
+      <input type="number" id="draw-loops" min="1" max="50" value="10" />
+    </div>
+
+    <div class="panel-section">
+      <label>Draw speed</label>
+      <input type="range" id="draw-speed" min="1" max="200" step="1" value="30" />
+      <label>Line width</label>
+      <input type="range" id="draw-linewidth" min="0.5" max="8" step="0.1" value="1.5" />
+    </div>
+
+    <div class="panel-section">
+      <label>Color mode</label>
+      <select id="color-mode">
+        <option value="fixed">Fixed</option>
+        <option value="cycle">Cycle</option>
+      </select>
+      <label>Color</label>
+      <input type="color" id="color-fixed" value="#00ffcc" />
+      <label>Cycle speed</label>
+      <input type="range" id="color-cycle-speed" min="0.1" max="10" step="0.1" value="1" />
+      <label>Background</label>
+      <input type="color" id="background" value="#000000" />
+    </div>
+
+    <div class="panel-section audio-section">
+      <label>
+        <input type="checkbox" id="audio-enabled" />
+        Audio mode
+      </label>
+      <select id="audio-source">
+        <option value="file">Load file</option>
+        <option value="system">System audio</option>
+      </select>
+      <button id="audio-load-btn">Load audio file</button>
+      <input type="file" id="audio-file-input" accept="audio/*" style="display:none" />
+
+      <div class="audio-mappings">
+        <div class="mapping-row">
+          <input type="checkbox" id="map-level" checked /> Level → line width
+          <input type="range" id="map-level-sens" min="0.1" max="5" step="0.1" value="1" />
+        </div>
+        <div class="mapping-row">
+          <input type="checkbox" id="map-bass" checked /> Bass → pen offset
+          <input type="range" id="map-bass-sens" min="0.1" max="5" step="0.1" value="1" />
+        </div>
+        <div class="mapping-row">
+          <input type="checkbox" id="map-spectrum" checked /> Spectrum → hue
+          <input type="range" id="map-spectrum-sens" min="0.1" max="5" step="0.1" value="1" />
+        </div>
+        <div class="mapping-row">
+          <input type="checkbox" id="map-beat" checked /> Beat → speed kick
+          <input type="range" id="map-beat-sens" min="0.1" max="5" step="0.1" value="1" />
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section panel-buttons">
+      <button id="btn-randomize">Randomize</button>
+      <button id="btn-restart">Restart</button>
+      <button id="btn-save">Save PNG</button>
+    </div>
+
+    <div class="panel-hint">H — hide panel &nbsp;|&nbsp; F/F11 — fullscreen</div>
+  </div>
+
+  <script type="module" src="renderer/main.js"></script>
+</body>
+</html>
