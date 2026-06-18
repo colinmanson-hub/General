@@ -46,7 +46,32 @@ function resample(rawPoints, closed = true) {
     normals.push({ x: ty / tlen, y: -tx / tlen });
   }
 
+  // The per-segment tangents/normals step discontinuously at sharp corners
+  // (polygon/rect/star vertices). A rolling wheel would otherwise teleport as the
+  // frame flips in a single step. Spread each corner's turn over a few samples by
+  // smoothing the frame, then re-normalize to keep unit vectors.
+  smoothFrame(tangents);
+  smoothFrame(normals);
+
   return { points, tangents, normals, length: totalLen };
+}
+
+// In-place circular moving-average smoothing of a vector field, re-normalized to unit.
+function smoothFrame(vecs, iterations = 16) {
+  const n = vecs.length;
+  for (let it = 0; it < iterations; it++) {
+    const prev = vecs.map((v) => ({ x: v.x, y: v.y }));
+    for (let i = 0; i < n; i++) {
+      const a = prev[(i - 1 + n) % n];
+      const b = prev[i];
+      const c = prev[(i + 1) % n];
+      let x = (a.x + 2 * b.x + c.x) / 4;
+      let y = (a.y + 2 * b.y + c.y) / 4;
+      const len = Math.hypot(x, y) || 1;
+      vecs[i].x = x / len;
+      vecs[i].y = y / len;
+    }
+  }
 }
 
 function generateCircle(size) {
