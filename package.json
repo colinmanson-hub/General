@@ -6,13 +6,13 @@
   "main": "main.cjs",
   "scripts": {
     "start": "electron .",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "dist": "electron-builder"
   },
   "jest": {
     "testEnvironment": "node",
     "setupFiles": ["./tests/setup.js"],
-    "testMatch": ["**/tests/**/*.test.js"]
+    "testMatch": ["**/tests/**/*.test.js", "**/tests/**/*.test.cjs"]
   },
   "build": {
     "appId": "com.spirograph.studio",

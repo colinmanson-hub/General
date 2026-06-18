@@ -19,18 +19,23 @@ export function createAudioEngine() {
       analyser = ctx.createAnalyser();
       analyser.fftSize = 2048;
       analyser.smoothingTimeConstant = 0.8;
-      analyser.connect(ctx.destination);
+      // NOTE: the analyser is a passive tap — it does not need to be connected to
+      // ctx.destination to analyse. Routing it to the speakers would echo captured
+      // system/loopback audio back out, so only file playback opts into output.
       freqData = new Uint8Array(analyser.frequencyBinCount);
       timeData = new Uint8Array(analyser.fftSize);
     }
   }
 
-  function connectSource(newSource) {
+  // toOutput: route the source to the speakers too (file playback). System/loopback
+  // capture must NOT be routed to output or it feeds back into itself.
+  function connectSource(newSource, { toOutput = false } = {}) {
     if (source) {
       try { source.disconnect(); } catch (_) {}
     }
     source = newSource;
     source.connect(analyser);
+    if (toOutput) source.connect(ctx.destination);
   }
 
   return {
@@ -44,7 +49,7 @@ export function createAudioEngine() {
       const bufferSource = ctx.createBufferSource();
       bufferSource.buffer = audioBuffer;
       bufferSource.loop = true;
-      connectSource(bufferSource);
+      connectSource(bufferSource, { toOutput: true });
       bufferSource.start(0);
       playing = true;
     },

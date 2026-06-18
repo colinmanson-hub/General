@@ -5,6 +5,9 @@ export function createRoulette(shape, { r, d, side }) {
   const n = points.length;
   const sign = side === 'outside' ? 1 : -1;
 
+  // Live multiplier on the pen offset, driven by audio (bass) at draw time.
+  let penScale = 1;
+
   // totalT: advance the pen exactly `loops` times around the base curve.
   // Caller sets loops; here we just expose totalT = length so one traversal is t in [0, length].
   // Caller multiplies by loops in the main loop.
@@ -38,16 +41,29 @@ export function createRoulette(shape, { r, d, side }) {
     const cx = p.x + sign * r * nx;
     const cy = p.y + sign * r * ny;
 
-    // Wheel rotation: phi = s/r (sign matches rolling direction)
-    // For inside: wheel rotates opposite to travel; for outside: same direction
-    const phi = -sign * s / r;
+    // Absolute pen direction. Two contributions:
+    //  1. The base frame itself rotates as the contact point travels the curve —
+    //     captured by the outward-normal angle `a`. For a circle a = s/R; for a
+    //     straight edge a is constant.
+    //  2. The wheel spins by s/r as it rolls without slipping.
+    // Combining gives the classic spirograph result. For a circle (a = s/R):
+    //   inside : phi = a - s/r  → pen term angle ((R-r)/r)·t  (hypotrochoid)
+    //   outside: phi = a + s/r + π → pen term angle ((R+r)/r)·t (epitrochoid)
+    const a = Math.atan2(ny, nx);
+    const phi = a + sign * (s / r) + (sign > 0 ? Math.PI : 0);
 
-    // Pen offset vector rotated by phi (initial direction along +x)
-    const px = cx + d * Math.cos(phi);
-    const py = cy + d * Math.sin(phi);
+    // Pen offset vector rotated by phi
+    const dEff = d * penScale;
+    const px = cx + dEff * Math.cos(phi);
+    const py = cy + dEff * Math.sin(phi);
 
     return { x: px, y: py };
   }
 
-  return { pointAt, totalT };
+  return {
+    pointAt,
+    totalT,
+    setPenScale(s) { penScale = Number.isFinite(s) && s > 0 ? s : 1; },
+    getPenScale() { return penScale; },
+  };
 }

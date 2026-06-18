@@ -90,6 +90,9 @@ export function createAnimator(canvas) {
       if (newStyle.background !== undefined) style.background = newStyle.background;
       if (newStyle.speed !== undefined) speed = newStyle.speed;
       if (newStyle.loops !== undefined) loops = newStyle.loops;
+      if (newStyle.penScale !== undefined && roulette && roulette.setPenScale) {
+        roulette.setPenScale(newStyle.penScale);
+      }
     },
 
     setSpeed(s) { speed = s; },

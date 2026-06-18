@@ -110,6 +110,21 @@ describe('setStyle', () => {
   });
 });
 
+describe('setStyle penScale', () => {
+  test('forwards penScale to the active roulette', () => {
+    const a = createAnimator(makeMockCanvas());
+    const r = makeRoulette();
+    a.setCurve(r, 2);
+    a.setStyle({ penScale: 1.7 });
+    expect(r.getPenScale()).toBeCloseTo(1.7);
+  });
+
+  test('penScale before a curve is set does not throw', () => {
+    const a = createAnimator(makeMockCanvas());
+    expect(() => a.setStyle({ penScale: 2 })).not.toThrow();
+  });
+});
+
 describe('savePng', () => {
   test('returns a data:image/png URL', () => {
     const canvas = makeMockCanvas();
@@ -152,6 +167,77 @@ describe('color cycling', () => {
     a.setStyle({ color: { mode: 'cycle', cycleSpeed: 2 } });
     a.start();
     expect(() => tickFrame()).not.toThrow();
+    a.stop();
+  });
+});
+
+describe('totalT / setCurve', () => {
+  test('getTotalT() = roulette.totalT × loops', () => {
+    const a = createAnimator(makeMockCanvas());
+    const r = makeRoulette();
+    a.setCurve(r, 4);
+    expect(a.getTotalT()).toBeCloseTo(r.totalT * 4);
+  });
+
+  test('setCurve defaults to 10 loops when omitted', () => {
+    const a = createAnimator(makeMockCanvas());
+    const r = makeRoulette();
+    a.setCurve(r);
+    expect(a.getTotalT()).toBeCloseTo(r.totalT * 10);
+  });
+});
+
+describe('completion', () => {
+  beforeEach(() => { global._rafQueue = []; });
+
+  test('stops running once t reaches totalT', () => {
+    const a = createAnimator(makeMockCanvas());
+    a.setCurve(makeRoulette(), 1); // short curve
+    a.setStyle({ speed: 50 });     // burn through it fast
+    a.start();
+    // Drive frames until the queue drains or the animator reports completion.
+    for (let i = 0; i < 50 && a.isRunning(); i++) tickFrame();
+    expect(a.isRunning()).toBe(false);
+    expect(a.getT()).toBeGreaterThanOrEqual(a.getTotalT());
+  });
+
+  test('higher speed advances t further per frame', () => {
+    const slow = createAnimator(makeMockCanvas());
+    slow.setCurve(makeRoulette(), 10);
+    slow.setStyle({ speed: 5 });
+    slow.start();
+    tickFrame();
+    const slowT = slow.getT();
+    slow.stop();
+
+    global._rafQueue = [];
+    const fast = createAnimator(makeMockCanvas());
+    fast.setCurve(makeRoulette(), 10);
+    fast.setStyle({ speed: 40 });
+    fast.start();
+    tickFrame();
+    const fastT = fast.getT();
+    fast.stop();
+
+    expect(fastT).toBeGreaterThan(slowT);
+  });
+});
+
+describe('stop / restart', () => {
+  beforeEach(() => { global._rafQueue = []; });
+
+  test('after clear, start resumes from t=0', () => {
+    const a = createAnimator(makeMockCanvas());
+    a.setCurve(makeRoulette(), 5);
+    a.setStyle({ speed: 20 });
+    a.start();
+    tickFrame();
+    a.clear();
+    expect(a.getT()).toBe(0);
+    a.start();
+    expect(a.isRunning()).toBe(true);
+    tickFrame();
+    expect(a.getT()).toBeGreaterThan(0);
     a.stop();
   });
 });

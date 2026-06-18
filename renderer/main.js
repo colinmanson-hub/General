@@ -4,6 +4,7 @@ import { generateShape } from './shapes.js';
 import { createRoulette } from './roulette.js';
 import { createAnimator } from './animator.js';
 import { createAudioEngine } from './audio.js';
+import { computeAudioModulation } from './audioMapping.js';
 import { bindControls } from './controls.js';
 
 // --- Default settings (epic #1 contract) ---
@@ -50,6 +51,7 @@ function applyStyle() {
     background: settings.background,
     speed: settings.draw.speed,
     loops: settings.draw.loops,
+    penScale: 1,
   });
 }
 
@@ -89,31 +91,15 @@ function enableAudioHook() {
   audioFrameHook = () => {
     if (!settings.audio.enabled || !audioEngine.isPlaying()) return;
     const f = audioEngine.getFeatures();
-    const m = settings.audio.mappings;
-
-    const lineWidth = m.level.enabled
-      ? settings.draw.lineWidth * (1 + f.level * m.level.sensitivity * 3)
-      : settings.draw.lineWidth;
-
-    const d = m.bass.enabled
-      ? settings.wheel.d * (1 + f.bass * m.bass.sensitivity * 0.8)
-      : settings.wheel.d;
-
-    // Hue shift from spectrum balance
-    let hueShift = 0;
-    if (m.spectrum.enabled) {
-      hueShift = (f.treble - f.bass) * 180 * m.spectrum.sensitivity;
-    }
-
-    // Beat: speed kick
-    const beatKick = m.beat.enabled && f.beat ? m.beat.sensitivity * 60 : 0;
+    const mod = computeAudioModulation(settings, f);
 
     animator.setStyle({
-      lineWidth,
-      speed: settings.draw.speed + beatKick,
+      lineWidth: mod.lineWidth,
+      penScale: mod.penScale,
+      speed: mod.speed,
       color: {
         ...settings.color,
-        cycleSpeed: settings.color.cycleSpeed + hueShift * 0.1,
+        cycleSpeed: mod.cycleSpeed,
       },
     });
   };
