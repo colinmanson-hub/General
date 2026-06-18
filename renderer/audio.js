@@ -4,7 +4,6 @@ export function createAudioEngine() {
   let ctx = null;
   let analyser = null;
   let source = null;
-  let buffer = null;
   let playing = false;
   let freqData = null;
   let timeData = null;
@@ -37,10 +36,13 @@ export function createAudioEngine() {
   return {
     async loadFile(file) {
       ensureContext();
+      // Autoplay policy: resume suspended context (requires user gesture, which the file-picker click provides)
+      await ctx.resume();
       const arrayBuffer = file instanceof ArrayBuffer ? file : await file.arrayBuffer();
-      buffer = await ctx.decodeAudioData(arrayBuffer);
+      // decodeAudioData detaches the buffer — use the decoded AudioBuffer, not the raw bytes
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
       const bufferSource = ctx.createBufferSource();
-      bufferSource.buffer = buffer;
+      bufferSource.buffer = audioBuffer;
       bufferSource.loop = true;
       connectSource(bufferSource);
       bufferSource.start(0);
@@ -49,6 +51,7 @@ export function createAudioEngine() {
 
     useSystemAudio(stream) {
       ensureContext();
+      ctx.resume();
       const streamSource = ctx.createMediaStreamSource(stream);
       connectSource(streamSource);
       playing = true;
@@ -64,7 +67,6 @@ export function createAudioEngine() {
       const nyquist = ctx.sampleRate / 2;
       const binHz = nyquist / binCount;
 
-      // Band boundaries (Hz -> bin index)
       const bassEnd = Math.floor(250 / binHz);
       const midEnd = Math.floor(4000 / binHz);
 
@@ -79,7 +81,6 @@ export function createAudioEngine() {
       const mid = avgBand(bassEnd, midEnd);
       const treble = avgBand(midEnd, binCount);
 
-      // RMS level from time domain
       let rms = 0;
       for (let i = 0; i < timeData.length; i++) {
         const s = (timeData[i] - 128) / 128;
@@ -87,7 +88,6 @@ export function createAudioEngine() {
       }
       const level = Math.min(1, Math.sqrt(rms / timeData.length) * 4);
 
-      // Beat detection: compare current bass energy to running average
       energyHistory.push(bass);
       if (energyHistory.length > BEAT_WINDOW) energyHistory.shift();
       const avgEnergy = energyHistory.reduce((a, b) => a + b, 0) / energyHistory.length;

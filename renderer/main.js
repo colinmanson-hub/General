@@ -162,8 +162,18 @@ bindControls(panelEl, settings, {
     }
   },
   async onLoadAudioFile(file) {
-    await audioEngine.loadFile(file);
-    enableAudioHook();
+    try {
+      await audioEngine.loadFile(file);
+      // Auto-enable audio mode and sync the checkbox
+      settings.audio.enabled = true;
+      const cb = document.getElementById('audio-enabled');
+      if (cb) cb.checked = true;
+      enableAudioHook();
+    } catch (err) {
+      console.error('Audio load failed:', err);
+      // eslint-disable-next-line no-alert
+      alert(`Could not load audio file: ${err.message}`);
+    }
   },
 });
 

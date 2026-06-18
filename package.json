@@ -2,11 +2,17 @@
   "name": "spirograph-studio",
   "version": "1.0.0",
   "description": "Spirograph Studio — animated geometric designs with audio visualization",
-  "main": "main.js",
+  "type": "module",
+  "main": "main.cjs",
   "scripts": {
     "start": "electron .",
     "test": "node --experimental-vm-modules node_modules/.bin/jest",
     "dist": "electron-builder"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFiles": ["./tests/setup.js"],
+    "testMatch": ["**/tests/**/*.test.js"]
   },
   "build": {
     "appId": "com.spirograph.studio",
@@ -15,8 +21,8 @@
       "target": "nsis"
     },
     "files": [
-      "main.js",
-      "preload.js",
+      "main.cjs",
+      "preload.cjs",
       "index.html",
       "styles.css",
       "renderer/**/*",
