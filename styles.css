@@ -98,20 +98,6 @@ button:hover { background: #2a3a2a; }
   margin-top: 6px;
 }
 
-.audio-mappings { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
-
-.mapping-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  color: #888;
-}
-
-.mapping-row input[type="range"] { flex: 1; }
-
-#audio-load-btn { width: 100%; margin-top: 2px; }
-
 /* scrollbar */
 #panel::-webkit-scrollbar { width: 4px; }
 #panel::-webkit-scrollbar-track { background: transparent; }

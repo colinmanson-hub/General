@@ -110,21 +110,6 @@ describe('setStyle', () => {
   });
 });
 
-describe('setStyle penScale', () => {
-  test('forwards penScale to the active roulette', () => {
-    const a = createAnimator(makeMockCanvas());
-    const r = makeRoulette();
-    a.setCurve(r, 2);
-    a.setStyle({ penScale: 1.7 });
-    expect(r.getPenScale()).toBeCloseTo(1.7);
-  });
-
-  test('penScale before a curve is set does not throw', () => {
-    const a = createAnimator(makeMockCanvas());
-    expect(() => a.setStyle({ penScale: 2 })).not.toThrow();
-  });
-});
-
 describe('savePng', () => {
   test('returns a data:image/png URL', () => {
     const canvas = makeMockCanvas();
@@ -193,7 +178,7 @@ describe('completion', () => {
   test('stops running once t reaches totalT', () => {
     const a = createAnimator(makeMockCanvas());
     a.setCurve(makeRoulette(), 1); // short curve
-    a.setStyle({ speed: 50 });     // burn through it fast
+    a.setStyle({ speed: 5000 });   // burn through it fast (advance is speed * SEGMENT_STEP)
     a.start();
     // Drive frames until the queue drains or the animator reports completion.
     for (let i = 0; i < 50 && a.isRunning(); i++) tickFrame();
@@ -220,6 +205,112 @@ describe('completion', () => {
     fast.stop();
 
     expect(fastT).toBeGreaterThan(slowT);
+  });
+});
+
+describe('completion stops the animation', () => {
+  beforeEach(() => { global._rafQueue = []; });
+
+  test('manual mode stops once the curve is fully drawn', () => {
+    const a = createAnimator(makeMockCanvas());
+    a.setCurve(makeRoulette(), 1);
+    a.setStyle({ speed: 5000 });
+    a.start();
+    for (let i = 0; i < 50 && a.isRunning(); i++) tickFrame();
+    expect(a.isRunning()).toBe(false);
+  });
+});
+
+describe('setGuides', () => {
+  beforeEach(() => { global._rafQueue = []; });
+
+  test('accepting guides and drawing them does not throw', () => {
+    const a = createAnimator(makeMockCanvas());
+    a.setCurve(makeRoulette(), 2);
+    a.onResize();
+    const guides = {
+      base: [{ x: 0.5, y: 0 }, { x: 0, y: 0.5 }, { x: -0.5, y: 0 }, { x: 0, y: -0.5 }],
+      wheel: [{ x: 0.2, y: 0 }, { x: 0, y: 0.2 }, { x: -0.2, y: 0 }],
+      center: { x: 0.2, y: 0 },
+      pen: { x: 0.35, y: 0 },
+    };
+    expect(() => a.setGuides(guides)).not.toThrow();
+    expect(() => a.clear()).not.toThrow(); // clear() repaints the guides
+  });
+
+  test('setGuides(null) clears guides without throwing', () => {
+    const a = createAnimator(makeMockCanvas());
+    a.setCurve(makeRoulette(), 2);
+    expect(() => a.setGuides(null)).not.toThrow();
+    expect(() => a.clear()).not.toThrow();
+  });
+
+  test('guides extend the fit so a large base outline is not clipped', () => {
+    const a = createAnimator(makeMockCanvas());
+    a.setCurve(makeRoulette(), 2); // small curve
+    a.onResize();
+    // A base outline far larger than the curve should still be accommodated
+    // (no throw, fit recomputed). Mostly a smoke test on the fit path.
+    const guides = { base: [{ x: 5, y: 0 }, { x: 0, y: 5 }, { x: -5, y: 0 }], wheel: [], center: { x: 0, y: 0 }, pen: { x: 1, y: 0 } };
+    expect(() => a.setGuides(guides)).not.toThrow();
+  });
+});
+
+describe('speedForDuration', () => {
+  beforeEach(() => { global._rafQueue = []; });
+
+  test('returns current speed when duration is invalid', () => {
+    const a = createAnimator(makeMockCanvas());
+    a.setCurve(makeRoulette(), 2);
+    a.setStyle({ speed: 12 });
+    expect(a.speedForDuration(0)).toBe(12);
+  });
+
+  test('drawing completes in roughly the requested number of frames', () => {
+    const a = createAnimator(makeMockCanvas());
+    a.setCurve(makeRoulette(), 3);
+    const fps = 60, seconds = 2;
+    a.setStyle({ speed: a.speedForDuration(seconds, fps) });
+    a.start();
+    let frames = 0;
+    while (a.isRunning() && frames < fps * seconds * 3) { tickFrame(); frames++; }
+    expect(frames).toBeGreaterThan(fps * seconds * 0.7);
+    expect(frames).toBeLessThan(fps * seconds * 1.3);
+  });
+});
+
+describe('auto mode', () => {
+  beforeEach(() => { global._rafQueue = []; });
+
+  test('setAutoMode does not throw and exposes no new completion when manual', () => {
+    const a = createAnimator(makeMockCanvas());
+    expect(() => a.setAutoMode(true, () => {})).not.toThrow();
+    expect(() => a.setAutoMode(false)).not.toThrow();
+  });
+
+  test('fires onComplete and keeps looping across completion', () => {
+    const a = createAnimator(makeMockCanvas());
+    let completions = 0;
+    a.setAutoMode(true, () => { completions++; });
+    a.setCurve(makeRoulette(), 1);
+    a.setStyle({ speed: 5000 });
+    a.onResize();
+    a.start();
+    for (let i = 0; i < 60; i++) tickFrame();
+    expect(completions).toBeGreaterThan(0);
+    expect(a.isRunning()).toBe(true);
+    a.stop();
+  });
+
+  test('auto-mode drawing does not throw during frames', () => {
+    const a = createAnimator(makeMockCanvas());
+    a.setAutoMode(true, () => {});
+    a.setCurve(makeRoulette(), 2);
+    a.setStyle({ speed: 10 });
+    a.onResize();
+    a.start();
+    expect(() => { for (let i = 0; i < 10; i++) tickFrame(); }).not.toThrow();
+    a.stop();
   });
 });
 

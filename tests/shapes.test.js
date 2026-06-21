@@ -1,6 +1,6 @@
 import { generateShape } from '../renderer/shapes.js';
 
-const TYPES = ['circle', 'rectangle', 'polygon', 'star'];
+const TYPES = ['circle', 'rectangle', 'oval', 'polygon', 'star'];
 
 // Helpers
 function spacing(points) {
@@ -90,6 +90,20 @@ describe('generateShape rectangle', () => {
     const size = 1, aspect = 2;
     const { length } = generateShape('rectangle', { size, aspect });
     expect(length).toBeCloseTo(2 * (size * aspect + size), 1);
+  });
+});
+
+describe('generateShape oval', () => {
+  test('aspect makes it wider than tall (x extent > y extent)', () => {
+    const { points } = generateShape('oval', { size: 1, aspect: 2 });
+    const maxX = Math.max(...points.map((p) => Math.abs(p.x)));
+    const maxY = Math.max(...points.map((p) => Math.abs(p.y)));
+    expect(maxX).toBeGreaterThan(maxY * 1.5);
+  });
+
+  test('aspect 1 is effectively a circle', () => {
+    const { length } = generateShape('oval', { size: 1, aspect: 1 });
+    expect(length).toBeCloseTo(Math.PI, 1); // 2π·(0.5)
   });
 });
 

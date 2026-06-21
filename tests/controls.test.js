@@ -41,19 +41,9 @@ function defaultSettings() {
   return {
     shape: { type: 'circle', sides: 6, points: 5, aspect: 1.5, size: 0.8 },
     wheel: { r: 0.3, d: 0.4, side: 'inside' },
-    draw: { speed: 30, loops: 10, lineWidth: 1.5 },
+    draw: { speed: 30, lineWidth: 1.5 },
     color: { mode: 'cycle', fixed: '#00ffcc', cycleSpeed: 1 },
     background: '#000000',
-    audio: {
-      enabled: false,
-      source: 'file',
-      mappings: {
-        level: { enabled: true, sensitivity: 1 },
-        bass: { enabled: true, sensitivity: 1 },
-        spectrum: { enabled: true, sensitivity: 1 },
-        beat: { enabled: true, sensitivity: 1 },
-      },
-    },
   };
 }
 
@@ -63,8 +53,6 @@ function noopCallbacks(overrides = {}) {
     onRandomize: () => {},
     onRestart: () => {},
     onSavePng: () => {},
-    onToggleAudio: () => {},
-    onLoadAudioFile: () => {},
     ...overrides,
   };
 }
@@ -105,28 +93,16 @@ describe('bindControls — value binding', () => {
     expect(calls).toContain(false); // style change, not structural
   });
 
-  test('checkbox change coerces Boolean', () => {
+  test('deep-path binding writes nested values', () => {
     const settings = defaultSettings();
-    const mapLevel = makeEl('checkbox');
-    installDom({ 'map-level': mapLevel });
+    const wheelR = makeEl('range', '0.3');
+    installDom({ 'wheel-r': wheelR });
     bindControls(makeEl(), settings, noopCallbacks());
 
-    mapLevel.checked = false;
-    mapLevel._fire('change');
+    wheelR.value = '0.42';
+    wheelR._fire('input');
 
-    expect(settings.audio.mappings.level.enabled).toBe(false);
-  });
-
-  test('deep-path binding writes nested sensitivity values', () => {
-    const settings = defaultSettings();
-    const sens = makeEl('range', '1');
-    installDom({ 'map-bass-sens': sens });
-    bindControls(makeEl(), settings, noopCallbacks());
-
-    sens.value = '3.5';
-    sens._fire('input');
-
-    expect(settings.audio.mappings.bass.sensitivity).toBe(3.5);
+    expect(settings.wheel.r).toBe(0.42);
   });
 });
 
@@ -152,46 +128,6 @@ describe('bindControls — buttons', () => {
     expect(randomized).toBe(1);
     expect(restarted).toBe(1);
     expect(saved).toBe(1);
-  });
-
-  test('toggling audio checkbox invokes onToggleAudio with the new value', () => {
-    const settings = defaultSettings();
-    const audioEnabled = makeEl('checkbox');
-    installDom({ 'audio-enabled': audioEnabled });
-    const toggled = [];
-    bindControls(makeEl(), settings, noopCallbacks({
-      onToggleAudio: (v) => toggled.push(v),
-    }));
-
-    audioEnabled.checked = true;
-    audioEnabled._fire('change');
-
-    expect(settings.audio.enabled).toBe(true);
-    expect(toggled).toContain(true);
-  });
-
-  test('load button forwards a chosen file to onLoadAudioFile', () => {
-    const settings = defaultSettings();
-    const loadBtn = makeEl('button');
-    const fileInput = makeEl('file');
-    installDom({ 'audio-load-btn': loadBtn, 'audio-file-input': fileInput });
-
-    // Clicking the visible button should trigger the hidden file input.
-    let inputClicked = false;
-    fileInput.click = () => { inputClicked = true; };
-
-    const loaded = [];
-    bindControls(makeEl(), settings, noopCallbacks({
-      onLoadAudioFile: (f) => loaded.push(f),
-    }));
-
-    loadBtn._fire('click');
-    expect(inputClicked).toBe(true);
-
-    const fakeFile = { name: 'song.mp3' };
-    fileInput.files = [fakeFile];
-    fileInput._fire('change');
-    expect(loaded).toEqual([fakeFile]);
   });
 });
 
@@ -224,15 +160,12 @@ describe('bindControls — initial sync', () => {
   test('syncUI writes settings back onto the inputs', () => {
     const settings = defaultSettings();
     settings.draw.speed = 77;
-    settings.audio.enabled = true;
     const speed = makeEl('range', '0');
-    const audioEnabled = makeEl('checkbox');
-    installDom({ 'draw-speed': speed, 'audio-enabled': audioEnabled });
+    installDom({ 'draw-speed': speed });
 
     bindControls(makeEl(), settings, noopCallbacks());
 
     expect(Number(speed.value)).toBe(77);
-    expect(audioEnabled.checked).toBe(true);
   });
 
   test('missing elements are tolerated (no throw)', () => {
@@ -256,7 +189,6 @@ describe('bindControls — structural vs style classification', () => {
   test.each([
     ['wheel-r', 'range', '0.5', 'wheel', 'r', 0.5],
     ['wheel-d', 'range', '0.7', 'wheel', 'd', 0.7],
-    ['draw-loops', 'number', '12', 'draw', 'loops', 12],
     ['shape-aspect', 'number', '2.5', 'shape', 'aspect', 2.5],
   ])('%s is structural and updates settings', (id, type, value, group, key, expected) => {
     const el = makeEl(type, '0');

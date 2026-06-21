@@ -1,7 +1,7 @@
 {
   "name": "spirograph-studio",
   "version": "1.0.0",
-  "description": "Spirograph Studio — animated geometric designs with audio visualization",
+  "description": "Spirograph Studio — animated geometric designs",
   "type": "module",
   "main": "main.cjs",
   "scripts": {

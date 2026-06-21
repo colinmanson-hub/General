@@ -62,6 +62,100 @@ describe('createRoulette — circle base', () => {
   });
 });
 
+describe('createRoulette — closure', () => {
+  test('exposes getClosureLoops', () => {
+    const shape = generateShape('circle', { size: 1 });
+    const roulette = createRoulette(shape, { r: 0.2, d: 0.15, side: 'inside' });
+    expect(typeof roulette.getClosureLoops).toBe('function');
+  });
+
+  test('circle base closes exactly: pen returns to start after the reported loops', () => {
+    // R = 0.4, r = 0.16 → R/r = 2.5 = 5/2 → closes in 2 loops.
+    const shape = generateShape('circle', { size: 0.8 });
+    const roulette = createRoulette(shape, { r: 0.16, d: 0.4, side: 'inside' });
+    const k = roulette.getClosureLoops();
+    expect(k).toBe(2);
+    const start = roulette.pointAt(0);
+    const end = roulette.pointAt(k * roulette.totalT);
+    expect(Math.hypot(start.x - end.x, start.y - end.y)).toBeLessThan(1e-9);
+  });
+
+  test('engineered radius closes any shape in exactly q loops', () => {
+    for (const type of ['polygon', 'star', 'rectangle']) {
+      const shape = generateShape(type, { size: 0.8, sides: 5, points: 7, aspect: 2 });
+      const [p, q] = [7, 3];
+      const r = (shape.length * q) / (2 * Math.PI * p);
+      const roulette = createRoulette(shape, { r, d: 0.4, side: 'inside' });
+      expect(roulette.getClosureLoops()).toBe(q);
+      const start = roulette.pointAt(0);
+      const end = roulette.pointAt(q * roulette.totalT);
+      expect(Math.hypot(start.x - end.x, start.y - end.y)).toBeLessThan(1e-9);
+    }
+  });
+
+  test('returns a bounded loop count even when no exact closure exists', () => {
+    const shape = generateShape('circle', { size: 0.777 });
+    const roulette = createRoulette(shape, { r: 0.3123, d: 0.4, side: 'inside' });
+    const k = roulette.getClosureLoops(400);
+    expect(k).toBeGreaterThanOrEqual(1);
+    expect(k).toBeLessThanOrEqual(400);
+  });
+});
+
+describe('createRoulette — non-circular wheels', () => {
+  const wheels = ['oval', 'triangle', 'square', 'pentagon'];
+
+  test.each(wheels)('%s wheel: pointAt is finite across a closed pattern', (type) => {
+    const shape = generateShape('circle', { size: 0.9 });
+    const roulette = createRoulette(shape, { r: 0.3, d: 0.45, side: 'inside', type });
+    const total = roulette.totalT * roulette.getClosureLoops();
+    for (let i = 0; i <= 200; i++) {
+      const p = roulette.pointAt((i / 200) * total);
+      expect(Number.isFinite(p.x) && Number.isFinite(p.y)).toBe(true);
+    }
+  });
+
+  test.each(wheels)('%s wheel: pen sits exactly d from the wheel centre', (type) => {
+    const d = 0.45;
+    const shape = generateShape('circle', { size: 0.9 });
+    const roulette = createRoulette(shape, { r: 0.3, d, side: 'inside', type });
+    const g = roulette.getWheelGeometry(0);
+    expect(Math.hypot(g.pen.x - g.center.x, g.pen.y - g.center.y)).toBeCloseTo(d, 6);
+  });
+
+  test('closure uses the base/wheel perimeter ratio', () => {
+    // Square wheel sized so baseLength / wheelLength is rational.
+    const shape = generateShape('circle', { size: 1 });
+    const roulette = createRoulette(shape, { r: 0.25, d: 0.3, side: 'inside', type: 'square' });
+    const k = roulette.getClosureLoops();
+    expect(k).toBeGreaterThanOrEqual(1);
+    expect(k).toBeLessThanOrEqual(400);
+  });
+});
+
+describe('createRoulette — wheel geometry guides', () => {
+  test('circle wheel geometry: centre at R-r from origin, outline radius r', () => {
+    const shape = generateShape('circle', { size: 1 }); // R = 0.5
+    const r = 0.2;
+    const roulette = createRoulette(shape, { r, d: 0.15, side: 'inside' });
+    const g = roulette.getWheelGeometry(0);
+    expect(Math.hypot(g.center.x, g.center.y)).toBeCloseTo(0.5 - r, 3);
+    // every outline point is r away from the centre
+    for (const p of g.outline) {
+      expect(Math.hypot(p.x - g.center.x, p.y - g.center.y)).toBeCloseTo(r, 3);
+    }
+  });
+
+  test('outline is a closed loop', () => {
+    const shape = generateShape('circle', { size: 1 });
+    const roulette = createRoulette(shape, { r: 0.2, d: 0.15, side: 'inside', type: 'triangle' });
+    const g = roulette.getWheelGeometry(0);
+    const first = g.outline[0];
+    const last = g.outline[g.outline.length - 1];
+    expect(Math.hypot(first.x - last.x, first.y - last.y)).toBeLessThan(1e-9);
+  });
+});
+
 describe('createRoulette — continuity', () => {
   const shapes = ['circle', 'rectangle', 'polygon', 'star'];
 
@@ -96,39 +190,6 @@ describe('createRoulette — continuity', () => {
       expect(Math.hypot(curr.x - prev.x, curr.y - prev.y)).toBeLessThan(MAX_JUMP);
       prev = curr;
     }
-  });
-});
-
-describe('createRoulette — pen scale (audio reactive)', () => {
-  test('penScale defaults to 1', () => {
-    const shape = generateShape('circle', { size: 1 });
-    const r = createRoulette(shape, { r: 0.3, d: 0.2, side: 'inside' });
-    expect(r.getPenScale()).toBe(1);
-  });
-
-  test('setPenScale scales the pen offset away from the wheel centre', () => {
-    const shape = generateShape('circle', { size: 1 });
-    const r = createRoulette(shape, { r: 0.3, d: 0.2, side: 'inside' });
-
-    // Wheel centre is independent of pen offset; recover it as the midpoint
-    // between scale s and scale -... instead compare displacement growth.
-    const at = (s) => { r.setPenScale(s); return r.pointAt(0.123); };
-    const base = at(1);
-    const scaled = at(2);
-    // Centre = base - d*u ; scaled = centre + 2d*u = base + d*u, so scaled != base
-    // and the move from base->scaled equals base->centre in the opposite sense.
-    expect(scaled.x).not.toBeCloseTo(base.x, 6);
-  });
-
-  test('invalid pen scales fall back to 1', () => {
-    const shape = generateShape('circle', { size: 1 });
-    const r = createRoulette(shape, { r: 0.3, d: 0.2, side: 'inside' });
-    r.setPenScale(0);
-    expect(r.getPenScale()).toBe(1);
-    r.setPenScale(-3);
-    expect(r.getPenScale()).toBe(1);
-    r.setPenScale(NaN);
-    expect(r.getPenScale()).toBe(1);
   });
 });
 
@@ -179,19 +240,6 @@ describe('createRoulette — pen offset magnitude', () => {
       const p = pen.pointAt(s);
       expect(Math.hypot(p.x - c.x, p.y - c.y)).toBeCloseTo(d, 3);
     }
-  });
-
-  test('penScale multiplies the offset distance', () => {
-    const pen = createRoulette(shape, { r, d, side: 'inside' });
-    const s = 0.37 * pen.totalT;
-    const c = centre.pointAt(s);
-    pen.setPenScale(1);
-    const base = pen.pointAt(s);
-    pen.setPenScale(2.5);
-    const scaled = pen.pointAt(s);
-    const baseDist = Math.hypot(base.x - c.x, base.y - c.y);
-    const scaledDist = Math.hypot(scaled.x - c.x, scaled.y - c.y);
-    expect(scaledDist / baseDist).toBeCloseTo(2.5, 2);
   });
 });
 

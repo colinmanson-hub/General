@@ -35,8 +35,6 @@ jest.mock('electron', () => ({
   BrowserWindow: MockBrowserWindow,
   ipcMain: { handle: (name, fn) => handlers.set(name, fn) },
   dialog: dialogMock,
-  session: { defaultSession: { setDisplayMediaRequestHandler: jest.fn() } },
-  desktopCapturer: { getSources: async () => [{ id: 'screen:0' }] },
 }), { virtual: true });
 
 // Require after the mock is registered. Wait a macrotask so the

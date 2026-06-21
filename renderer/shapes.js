@@ -115,6 +115,18 @@ function generatePolygon(size, sides) {
   return resample(raw);
 }
 
+function generateOval(size, aspect) {
+  const rx = size / 2;
+  const ry = (size / 2) / (aspect || 1.6);
+  const raw = [];
+  const M = 256;
+  for (let i = 0; i < M; i++) {
+    const a = (2 * Math.PI * i) / M;
+    raw.push({ x: rx * Math.cos(a), y: ry * Math.sin(a) });
+  }
+  return resample(raw);
+}
+
 function generateStar(size, numPoints) {
   const outer = size / 2;
   const inner = outer * 0.4;
@@ -132,6 +144,7 @@ export function generateShape(type, params) {
   switch (type) {
     case 'circle':    return generateCircle(size);
     case 'rectangle': return generateRectangle(size, aspect);
+    case 'oval':      return generateOval(size, aspect);
     case 'polygon':   return generatePolygon(size, sides);
     case 'star':      return generateStar(size, numPoints);
     default:          return generateCircle(size);

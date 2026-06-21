@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, session, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -17,13 +17,6 @@ function createWindow() {
   });
 
   win.loadFile('index.html');
-
-  // Allow loopback/system audio capture via desktopCapturer
-  session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
-    desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
-      callback({ video: sources[0], audio: 'loopback' });
-    });
-  });
 }
 
 app.whenReady().then(() => {

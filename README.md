@@ -1,11 +1,11 @@
 # Spirograph Studio
 
-Electron desktop app for animated spirograph-style geometric designs with an audio-reactive visualizer.
+Electron desktop app for animated spirograph-style geometric designs.
 
 ## Requirements
 
 - [Node.js](https://nodejs.org/) v18+
-- Windows (for system audio capture and packaging)
+- Windows (for packaging)
 
 ## Install
 
@@ -34,10 +34,11 @@ Produces a Windows NSIS installer under `dist/`.
 
 - **Shapes**: Circle, Rectangle, Polygon (N sides), Star (N points)
 - **Rolling**: Wheel rolls inside or outside the base shape (generalized roulette math)
+- **Closure**: Each design draws until the pen returns exactly to its starting point
 - **Color**: Fixed color or hue-cycling along the drawn path
-- **Audio visualizer**: Load an audio file or capture system/loopback audio (Windows) — maps level, bass, spectrum, and beat onset to line width, pen offset, hue, and draw speed
+- **Manual / Auto modes**: Manual draws one design; Auto continuously generates pleasing random designs (10–30s each), cross-fading between them
 - **Save PNG**: Exports the current design via a native save dialog
-- **Randomize**: Picks pleasing random parameters with coprime-ish wheel ratios for circles
+- **Randomize**: Picks pleasing random parameters with wheel ratios that close cleanly
 
 ## Keyboard shortcuts
 
